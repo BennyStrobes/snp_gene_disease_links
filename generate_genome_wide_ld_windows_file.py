@@ -62,7 +62,9 @@ def window_does_not_overlap_long_ld_region(long_ld_regions, chrom_string, window
 # Command line args
 ######################
 baselineLD_anno_dir = sys.argv[1]
-genome_wide_ld_windows_file = sys.argv[2]
+quasi_independent_ld_blocks_file = sys.argv[2]
+genome_wide_ld_windows_file = sys.argv[3]
+
 
 
 # Regions identified in methods of Weissbrod et al 2020 Nature Genet (hg19) and lifted over to hg38
@@ -71,44 +73,28 @@ long_ld_regions = ['chr6_25499772_33532223', 'chr8_8142478_12142491', 'chr11_459
 
 
 
-# Create mapping from chrom num to min and max variant position
-chrom_to_min_max_variant_pos = create_mapping_from_chrom_num_to_min_max_variant_position(baselineLD_anno_dir)
-
-
-
 # Print windows to output file
 t = open(genome_wide_ld_windows_file, 'w')
-t.write('chrom_num\tstart_pos_inclusive\tend_position_exclusive\tchrom_first_window_boolean\tchrom_last_window_boolean\n')
+t.write('chrom_num\tstart_pos_inclusive\tend_position_exclusive\n')
 
-for chrom_num in range(1,23):
-	print(chrom_num)
-	chrom_string = str(chrom_num)
-	# Starting position and ending position of variants on this chromosome
-	start_pos = int(chrom_to_min_max_variant_pos[chrom_string][0])
-	end_pos = int(chrom_to_min_max_variant_pos[chrom_string][1])
 
-	cur_pos = start_pos - 1
+f = open(quasi_independent_ld_blocks_file)
+head_count = 0
+for line in f:
+	line = line.rstrip()
+	data = line.split('\t')
+	if head_count == 0:
+		head_count = head_count + 1
+		continue
 
-	converged_boolean = False
-	first_itera = 'True'
-	last_itera = 'False'
+	chrom_string = data[0].split('hr')[1]
+	window_start = int(data[1])
+	window_end = int(data[2])
 
-	while converged_boolean == False:
-		window_start = cur_pos
-		window_end = cur_pos + 3000000
+	if window_does_not_overlap_long_ld_region(long_ld_regions, chrom_string, window_start, window_end):
+		t.write(chrom_string + '\t' + str(window_start) + '\t' + str(window_end) + '\n')
 
-		if window_end > end_pos:
-			converged_boolean = True
-			last_itera = 'True'
-
-		if window_does_not_overlap_long_ld_region(long_ld_regions, chrom_string, window_start, window_end):
-			t.write(chrom_string + '\t' + str(window_start) + '\t' + str(window_end) + '\t' + first_itera + '\t' + last_itera + '\n')
-
-		cur_pos = cur_pos + 1000000
-		first_itera = 'False'
-
+f.close()
 t.close()
-
-print(genome_wide_ld_windows_file)
 
 

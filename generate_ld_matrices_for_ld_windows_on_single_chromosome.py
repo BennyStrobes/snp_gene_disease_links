@@ -47,6 +47,54 @@ def save_snp_rsids_to_text_file(snp_id_output_file, window_rsids):
 	t.close()
 	return
 
+def eigenvalue_decomp_ld(ld_mat):
+	# EIG value decomp
+	lambdas_full, U_full = np.linalg.eig(ld_mat)
+	non_negative_components = lambdas_full > 0.0
+	lambdas = lambdas_full[non_negative_components]
+	U = U_full[:, non_negative_components]
+	real_components = np.iscomplex(lambdas) == False
+	lambdas = lambdas[real_components]
+	U = U[:, real_components]
+	if np.sum(np.iscomplex(lambdas)) > 0:
+		print('assumption eroror')
+		pdb.set_trace()
+	lambdas = lambdas.astype(float)
+	U = U.astype(float)
+
+	rho_thresh = 0.99
+	lambda_thresh = compute_lambda_thresh(lambdas, rho_thresh)
+	thresh_components = lambdas >= lambda_thresh
+	lambdas = lambdas[thresh_components]
+	U = U[:, thresh_components]
+
+
+	# Note that reconstruction of ld_mat is achieved with np.dot(np.dot(U, np.diag(lambdas)), np.transpose(U))
+
+	# Compute some relevent quantities
+	Q_mat = np.dot(np.diag(lambdas**(.5)), np.transpose(U))
+	w_premult = np.dot(np.diag(lambdas**(-.5)), np.transpose(U))    
+
+	return Q_mat, w_premult
+
+def compute_lambda_thresh(lambdas, rho_thresh):
+	totaler = np.sum(lambdas)
+	cur_total = 0
+	lambda_thresh = -1
+	for lambda_val in -np.sort(-lambdas):
+		cur_total = cur_total + lambda_val
+		if cur_total/totaler > rho_thresh:
+			if lambda_thresh == -1:
+				lambda_thresh = lambda_val
+
+
+	if lambda_thresh == -1:
+		print('assumption eroror')
+		pdb.set_trace()
+
+	return lambda_thresh
+
+
 ######################
 # Command line args
 ######################
@@ -55,7 +103,8 @@ genome_wide_ld_windows_file = sys.argv[2]
 hapmap3_rsid_file = sys.argv[3]
 baselineLD_anno_dir = sys.argv[4]
 kg_plink_dir = sys.argv[5]
-output_dir = sys.argv[6]
+snp_set = sys.argv[6]
+output_dir = sys.argv[7]
 
 
 # Contains hapmap3 rsids from all chromosomes (this should be cool)
@@ -97,9 +146,9 @@ if len(valid_snps) != np.sum(valid_snps):
 # For each window extract LD
 f = open(genome_wide_ld_windows_file)
 # Also open output file
-output_file = output_dir + 'window_LD_summary_chr' + str(chrom_num) + '.txt'
+output_file = output_dir + 'window_LD_summary_' + snp_set + '_chr' + str(chrom_num) + '.txt'
 t = open(output_file,'w')
-t.write('window_id\tchrom_num\tstart_position\tend_position\tsquared_LD_mat\tsnp_file\tmiddle_regression_snp_file\n')
+t.write('window_id\tchrom_num\tstart_position\tend_position\tLD_mat\tsnp_file\tLD_EIVD_Q_mat_file\tLD_EIVD_W_mat_file\n')
 
 head_count = 0
 for line in f:
@@ -127,47 +176,56 @@ for line in f:
 	window_rsids = snp_rs_ids[window_indices]
 	window_snp_pos = ref_pos[window_indices]
 	window_G = G[:, window_indices]
-	window_middle_start_pos = window_start_pos + 1000000
-	window_middle_end_pos = window_start_pos + 2000000
 
 	# Compute window LD
 	window_LD = np.corrcoef(np.transpose(window_G))
 	print(window_LD.shape)
 
-	# Extract indice of snps that are middle-regression snps
-	middle_regression_snp_boolean = []
-	for ii, window_rsid in enumerate(window_rsids):
-		tmp_pos = window_snp_pos[ii]
-		if window_rsid in regression_rsid_dictionary and tmp_pos >= window_middle_start_pos and tmp_pos < window_middle_end_pos:
-			middle_regression_snp_boolean.append(True)
-		else:
-			middle_regression_snp_boolean.append(False)
-	middle_regression_snp_boolean = np.asarray(middle_regression_snp_boolean)
+	# Extract indice of snps that are regression snps
+	if snp_set == 'hampmap3_snps':
+		regression_snp_boolean = []
+		for ii, window_rsid in enumerate(window_rsids):
+			tmp_pos = window_snp_pos[ii]
+			if window_rsid in regression_rsid_dictionary:
+				regression_snp_boolean.append(True)
+			else:
+				regression_snp_boolean.append(False)
+		regression_snp_boolean = np.asarray(regression_snp_boolean)
+	else:
+		print('assumption erororo')
+		print('not yet implemented')
 
 	# Skip windows with very few regression snps
-	if np.sum(middle_regression_snp_boolean) < 5:
+	if np.sum(regression_snp_boolean) < 5:
 		print('skip window')
 		continue
 
-	# Filter some things to only the middle rsids
-	window_middle_rsids = window_rsids[middle_regression_snp_boolean]
-	filtered_LD = window_LD[middle_regression_snp_boolean, :]
-	# Get squared LD
-	squared_LD = np.square(filtered_LD)
-	squared_LD = squared_LD - ((1.0-squared_LD)/(n_ref_samples-2.0))
+	# Filter snps to only regression snps
+	window_final_rsids = window_rsids[regression_snp_boolean]
+	filtered_LD = window_LD[regression_snp_boolean, :][:, regression_snp_boolean]
 
-	# Save squared LD file to npy file
-	ld_output_file = output_dir + window_name + '_squared_LD.npy'
-	np.save(ld_output_file, squared_LD)
+
+	# Run eigenvalue decomposition on LD matrix
+	Q_mat, w_premult = eigenvalue_decomp_ld(filtered_LD)
+	print(Q_mat.shape)
+
+	# Save LD file to npy file
+	ld_output_file = output_dir + snp_set + '_' + window_name + '_LD.npy'
+	np.save(ld_output_file, filtered_LD)
 
 	# Save snp rsids to text file
-	snp_id_output_file = output_dir + window_name + '_rsids.txt'
-	save_snp_rsids_to_text_file(snp_id_output_file, window_rsids)
-	middle_regression_snp_id_output_file = output_dir + window_name + '_middle_regression_rsids.txt'
-	save_snp_rsids_to_text_file(middle_regression_snp_id_output_file, window_middle_rsids)
-	
+	snp_id_output_file = output_dir + snp_set + '_' + window_name + '_rsids.txt'
+	save_snp_rsids_to_text_file(snp_id_output_file, window_final_rsids)
 
-	t.write(window_name + '\t' + str(chrom_num) + '\t' + str(window_start_pos) + '\t' + str(window_end_pos) + '\t' + ld_output_file + '\t' + snp_id_output_file + '\t' + middle_regression_snp_id_output_file + '\n')
+	# Save EIVD Q mat file to npy file
+	Q_output_file = output_dir + snp_set + '_' + window_name + '_LD_EIVD_Q_mat.npy'
+	np.save(Q_output_file, Q_mat)
+	
+	# Save EIVD w mat file to npy file
+	W_output_file = output_dir + snp_set + '_' + window_name + '_LD_EIVD_W_mat.npy'
+	np.save(W_output_file, w_premult)
+
+	t.write(window_name + '\t' + str(chrom_num) + '\t' + str(window_start_pos) + '\t' + str(window_end_pos) + '\t' + ld_output_file + '\t' + snp_id_output_file + '\t' + Q_output_file + '\t' + W_output_file + '\n')
 
 f.close()
 t.close()

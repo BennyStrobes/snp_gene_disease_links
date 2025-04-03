@@ -10,6 +10,10 @@ non_redundent_summary_statistics_file="/n/groups/price/ldsc/sumstats_formatted_2
 # Directory containing summary statistics
 sumstat_dir="/n/groups/price/ldsc/sumstats_formatted_2024/sumstats/"
 
+# Directory of quasi-independent LD blocks (from cTWAS package)
+# Found here: https://github.com/xinhe-lab/ctwas/tree/main/inst/extdata/ldetect on April 3 2025
+quasi_independent_ld_blocks_file="/n/groups/price/ben/quasi_independent_ld_blocks/ld_detect/EUR.b38.bed"
+
 # Directory containing plink files for 100G
 kg_plink_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/plink_files/"
 
@@ -53,7 +57,7 @@ learned_snp_gene_links_dir=${tmp_output_root}"learned_snp_gene_links/"
 # Code
 ##############################
 if false; then
-sh process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $processed_ld_data_dir
+sbatch process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $quasi_independent_ld_blocks_file $processed_ld_data_dir
 fi
 
 
