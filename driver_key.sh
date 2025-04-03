@@ -72,8 +72,9 @@ trait_file=${sumstat_dir}${trait_name}".sumstats"
 input_window_summary_file=${preorganized_snp_gene_annotation_dir}"window_LD_summary_with_snp_gene_anno_v2.txt"
 gene_summary_file=${preorganized_snp_gene_annotation_dir}"gene_name_to_integer_mapping.txt"
 output_stem=${learned_snp_gene_links_dir}"snp_gene_links_"${trait_name}
-sh run_snp_gene_disease_linking.sh $trait_name $trait_file $input_window_summary_file ${gene_summary_file} ${output_stem}
-
+if false; then
+sbatch run_snp_gene_disease_linking.sh $trait_name $trait_file $input_window_summary_file ${gene_summary_file} ${output_stem}
+fi
 
 
 

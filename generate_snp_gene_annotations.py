@@ -66,7 +66,8 @@ for chrom_num in range(1,23):
 			gene_distance_feature = ((gene_distance >= distance_bins[:,0]) & (gene_distance <= distance_bins[:,1]))*1.0
 			gene_rank_feature = np.zeros(len(distances))
 			gene_rank_feature[gene_index] = 1.0
-			gene_feature_vector = np.hstack((gene_distance_feature[:-1], gene_rank_feature[:-1]))
+			#gene_feature_vector = np.hstack((gene_distance_feature[:-1], gene_rank_feature[:-1]))
+			gene_feature_vector = np.hstack((gene_distance_feature, gene_rank_feature))
 			t.write('\t' + ';'.join(gene_feature_vector.astype(str)))
 		t.write('\n')
 
