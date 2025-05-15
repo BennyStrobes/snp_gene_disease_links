@@ -56,7 +56,8 @@ for line in f:
 	if head_count == 0:
 		head_count = head_count + 1
 		continue
-	gene_names_file = data[7]
+
+	gene_names_file = data[8]
 	gene_names_mat = np.load(gene_names_file)
 
 	for ii in range(gene_names_mat.shape[0]):
@@ -73,12 +74,14 @@ gene_names_arr = np.asarray(gene_names_arr)
 # Print gene names arr to output
 t = open(preorganized_snp_gene_annotation_dir + 'gene_name_to_integer_mapping.txt','w')
 t.write('gene_name\tgene_integer\n')
+
 for ii, gene_name in enumerate(gene_names_arr):
 	t.write(gene_name + '\t' + str(ii) + '\n')
 	if ii != gene_name_to_integer[gene_name]:
 		print('assumption eroror')
 		pdb.set_trace()
 t.close()
+
 
 #gene_names_arr, gene_name_to_integer = tmp_loading(preorganized_snp_gene_annotation_dir + 'gene_name_to_integer_mapping.txt')
 
@@ -104,7 +107,7 @@ for line in f:
 		t.write(line + '\n')
 		continue
 	print(data[0])
-	gene_names_file = data[7]
+	gene_names_file = data[8]
 	gene_names_mat = np.load(gene_names_file)
 
 	gene_names_integer_mat = convert_gene_names_mat_to_integer_mat(gene_names_mat, gene_name_to_integer)
@@ -113,11 +116,11 @@ for line in f:
 
 	data = np.asarray(data)
 
-	t.write('\t'.join(data[:7]) + '\t' + gene_names_integer_file + '\t' + data[8] + '\n')
+
+	t.write('\t'.join(data[:8]) + '\t' + gene_names_integer_file + '\t' + data[9] + '\n')
 
 
 
 f.close()
 t.close()
-
 

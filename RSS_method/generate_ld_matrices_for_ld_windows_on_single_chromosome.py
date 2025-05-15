@@ -39,12 +39,13 @@ def extract_dictionary_list_of_reference_rsids(filer):
 	return dicti
 
 
-def save_snp_rsids_to_text_file(snp_id_output_file, window_rsids):
+def save_snp_rsids_to_text_file(snp_id_output_file, window_rsids, window_rsid_a0s, window_rsid_a1s):
 	t = open(snp_id_output_file,'w')
-	t.write('rsid\n')
-	for window_rsid in window_rsids:
-		t.write(window_rsid + '\n')
+	t.write('rsid\ta0\ta1\n')
+	for ii,window_rsid in enumerate(window_rsids):
+		t.write(window_rsid + '\t' + window_rsid_a0s[ii] + '\t' + window_rsid_a1s[ii] + '\n')
 	t.close()
+	print(snp_id_output_file)
 	return
 
 def eigenvalue_decomp_ld(ld_mat):
@@ -176,6 +177,8 @@ for line in f:
 	window_rsids = snp_rs_ids[window_indices]
 	window_snp_pos = ref_pos[window_indices]
 	window_G = G[:, window_indices]
+	window_ref_a0 = ref_a0[window_indices]
+	window_ref_a1 = ref_a1[window_indices]
 
 	# Compute window LD
 	window_LD = np.corrcoef(np.transpose(window_G))
@@ -203,6 +206,8 @@ for line in f:
 	# Filter snps to only regression snps
 	window_final_rsids = window_rsids[regression_snp_boolean]
 	filtered_LD = window_LD[regression_snp_boolean, :][:, regression_snp_boolean]
+	window_final_ref_a0 = window_ref_a0[regression_snp_boolean]
+	window_final_ref_a1 = window_ref_a1[regression_snp_boolean]
 
 
 	# Run eigenvalue decomposition on LD matrix
@@ -215,7 +220,7 @@ for line in f:
 
 	# Save snp rsids to text file
 	snp_id_output_file = output_dir + snp_set + '_' + window_name + '_rsids.txt'
-	save_snp_rsids_to_text_file(snp_id_output_file, window_final_rsids)
+	save_snp_rsids_to_text_file(snp_id_output_file, window_final_rsids, window_final_ref_a0, window_final_ref_a1)
 
 	# Save EIVD Q mat file to npy file
 	Q_output_file = output_dir + snp_set + '_' + window_name + '_LD_EIVD_Q_mat.npy'

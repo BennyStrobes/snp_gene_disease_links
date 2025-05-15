@@ -89,8 +89,10 @@ def load_in_data(input_window_summary_file, rsid_to_chi_sq):
 	window_chi_sqs = []
 	window_snp_gene_names = []
 	window_snp_gene_annotations = []
+	window_snp_annotations = []
 
 	head_count = 0
+	counter = 0
 	f = open(input_window_summary_file)
 	for line in f:
 		line = line.rstrip()
@@ -105,6 +107,11 @@ def load_in_data(input_window_summary_file, rsid_to_chi_sq):
 		middle_regression_rsid_file = data[6]
 		linked_genes_file = data[7]
 		snp_gene_anno_file = data[8]
+		snp_anno_file = data[9]
+
+		counter = counter + 1
+		if counter > 223:
+			continue
 
 		# Extract middle regression rsids
 		middle_regression_rsids = extract_middle_regression_rsids(middle_regression_rsid_file)
@@ -122,13 +129,14 @@ def load_in_data(input_window_summary_file, rsid_to_chi_sq):
 		window_chi_sqs.append(window_chi_sq)
 		window_snp_gene_names.append(linked_genes_file)
 		window_snp_gene_annotations.append(snp_gene_anno_file)
+		window_snp_annotations.append(snp_anno_file)
 
 
 	f.close()
 
 
 
-	return np.asarray(window_names), np.asarray(window_ld_files), window_regression_snp_filters, window_chi_sqs, np.asarray(window_snp_gene_names), np.asarray(window_snp_gene_annotations)
+	return np.asarray(window_names), np.asarray(window_ld_files), window_regression_snp_filters, window_chi_sqs, np.asarray(window_snp_gene_names), np.asarray(window_snp_gene_annotations), np.asarray(window_snp_annotations)
 
 def load_in_genes(gene_summary_file):
 	gene_arr = []
@@ -149,7 +157,8 @@ def pred_per_snp_h2(W, bb, cc, sig_sq_g, window_snp_gene_anno, window_snp_gene_n
 		logits = tf.linalg.matvec(np.float32(window_snp_gene_anno), W) + bb
 		probs = tf.nn.softmax(logits,axis=1)
 		matrix_sig_sq_g = tf.gather(sig_sq_g, window_snp_gene_name)
-		per_snp_h2 = tf.reduce_sum(tf.multiply(probs, tf.math.exp(matrix_sig_sq_g)/scaling_factor), axis=1)
+		#per_snp_h2 = tf.reduce_sum(tf.multiply(probs, tf.math.exp(matrix_sig_sq_g)/scaling_factor), axis=1)
+		per_snp_h2 = tf.reduce_sum(tf.multiply(probs, matrix_sig_sq_g/scaling_factor), axis=1)
 	else:
 		logits = tf.linalg.matvec(np.float32(window_snp_gene_anno), W)
 		new_column = tf.fill([n_samp, 1], cc)
@@ -203,6 +212,26 @@ def write_average_gene_rank_probabilities(average_gene_rank_probabilities_output
 	t.close()
 	return
 
+def load_in_gs_genes(gs_file):
+	f = open(gs_file)
+	dicti = {}
+	for line in f:
+		line = line.rstrip()
+		dicti[line] = 1
+	f.close()
+	return dicti
+
+def extract_gene_boolean(ordered_genes, gs_genes_dicti):
+	boolean_arr = []
+	for gene in ordered_genes:
+		if gene.split('.')[0] in gs_genes_dicti:
+			boolean_arr.append(1.0)
+		else:
+			boolean_arr.append(0.0)
+
+
+	return np.asarray(boolean_arr)
+
 
 #######################
 # Command line args
@@ -211,18 +240,24 @@ trait_name = sys.argv[1]
 trait_sumstat_file = sys.argv[2]
 input_window_summary_file = sys.argv[3]
 gene_summary_file = sys.argv[4]
-output_stem = sys.argv[5]
+gs_file = sys.argv[5]
+output_stem = sys.argv[6]
 
 ################
 # Learning parameters
-learning_rate=2e-3
-max_epochs = 200
-scaling_factor = 100000.0
+learning_rate=1e-3
+max_epochs = 400
+scaling_factor = 100000000.0
+#scaling_factor = 100000.0
 null_component = False
 
 ######
 # Load in genes
 ordered_genes = load_in_genes(gene_summary_file)
+
+# Extract gs genes
+gs_genes_dicti = load_in_gs_genes(gs_file)
+gene_boolean = extract_gene_boolean(ordered_genes, gs_genes_dicti)
 
 ######
 # Load in sumstats
@@ -237,12 +272,14 @@ rsid_to_chi_sq, gwas_sample_size = create_dictionary_mapping_from_rsid_to_chi_sq
 # 3. Window chi-squared stats
 # 4. Window snp gene names (either data or files depending on mem)
 # 5. Window snp gene annos (either data or files depending on mem)
-window_names, window_sq_ld_files, window_regression_snp_filters, window_chi_sqs, window_snp_gene_name_files, window_snp_gene_annotation_files = load_in_data(input_window_summary_file, rsid_to_chi_sq)
+window_names, window_sq_ld_files, window_regression_snp_filters, window_chi_sqs, window_snp_gene_name_files, window_snp_gene_annotation_files, window_snp_annotation_files = load_in_data(input_window_summary_file, rsid_to_chi_sq)
 num_windows = len(window_names)
 
 # Extract number of features
 tmp_window_snp_gene_anno = np.load(window_snp_gene_annotation_files[0])
 n_samp, n_nearby_genes, K = tmp_window_snp_gene_anno.shape
+tmp_window_snp_anno = np.load(window_snp_annotation_files[0])
+LL = tmp_window_snp_anno.shape[1]
 
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -250,7 +287,12 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 W = tf.Variable(1e-8*tf.random.normal(shape=(K,)), dtype=tf.float32) # Weights
 bb = tf.Variable(0.0, dtype=tf.float32)  # (K+1,)
 cc = tf.Variable(0.0, dtype=tf.float32)  # (K+1,)
-sig_sq_g = tf.Variable(1e-16*tf.abs(tf.random.normal(shape=(len(ordered_genes),))), dtype=tf.float32) # Weights
+non_med_h2 = tf.Variable(1e-8*scaling_factor*tf.random.normal(shape=(LL,)), dtype=tf.float32) # Weights
+
+#non_med_h2 = tf.Variable((1e-8)*scaling_factor, dtype=tf.float32)
+#sig_sq_g = tf.Variable(-20.0*tf.abs(tf.random.normal(shape=(len(ordered_genes),))), dtype=tf.float32) # Weights
+#sig_sq_g = tf.Variable(1e-8*tf.abs(tf.random.normal(shape=(len(ordered_genes),))), dtype=tf.float32) # Weights
+sig_sq_g = tf.Variable(0.0, dtype=tf.float32)  # (K+1,)
 
 
 for epoch_iter in range(max_epochs):
@@ -274,21 +316,25 @@ for epoch_iter in range(max_epochs):
 		window_chi_sq = window_chi_sqs[window_iter]
 		window_snp_gene_name_file = window_snp_gene_name_files[window_iter]
 		window_snp_gene_annotation_file = window_snp_gene_annotation_files[window_iter]
+		window_snp_anno_file = window_snp_annotation_files[window_iter]
 
 		# Load in data
 		window_sq_ld = np.load(window_sq_ld_file)[window_regression_snp_filter,:]
 		window_snp_gene_name = np.load(window_snp_gene_name_file)
 		window_snp_gene_anno = np.load(window_snp_gene_annotation_file)
+		window_snp_anno = np.load(window_snp_anno_file)
 
 		# Dimensionality of space
 		n_samp, n_nearby_genes, K = window_snp_gene_anno.shape
 
 		with tf.GradientTape() as tape:
 			# predict per snp heritabilities
-			per_snp_h2, window_gene_rank_probs = pred_per_snp_h2(W, bb, cc, sig_sq_g, window_snp_gene_anno, window_snp_gene_name, n_samp, scaling_factor, epoch_iter, null_component=null_component)
+			per_snp_h2, window_gene_rank_probs = pred_per_snp_h2(W, bb, cc, gene_boolean*sig_sq_g, window_snp_gene_anno, window_snp_gene_name, n_samp, scaling_factor, epoch_iter, null_component=null_component)
+			
+			pred_non_med_h2 = tf.linalg.matvec(np.float32(window_snp_anno), non_med_h2/scaling_factor)
 
 			# Compute Loss
-			loss_value = ldsc_tf_loss_fxn(window_chi_sq, per_snp_h2, gwas_sample_size, window_sq_ld)
+			loss_value = ldsc_tf_loss_fxn(window_chi_sq, per_snp_h2+pred_non_med_h2, gwas_sample_size, window_sq_ld)
 
 		#pdb.set_trace()
 		#print('loss')
@@ -296,23 +342,26 @@ for epoch_iter in range(max_epochs):
 
 		# Compute gradients
 		#gradients = tape.gradient(loss_value, [W, bb, cc, sig_sq_g])
-		gradients = tape.gradient(loss_value, [W, sig_sq_g])
+		gradients = tape.gradient(loss_value, [W, sig_sq_g, bb, cc, non_med_h2])
 		
 		# Update weights using gradient descent
 		#optimizer.apply_gradients(zip(gradients, [W, bb, cc, sig_sq_g]))
-		optimizer.apply_gradients(zip(gradients, [W, sig_sq_g]))
+		optimizer.apply_gradients(zip(gradients, [W, sig_sq_g,bb,cc,non_med_h2]))
 
 		gene_rank_probs = gene_rank_probs + window_gene_rank_probs
 
 		if np.mod(window_counter,100) == 0.0:
 			print(window_counter)
 			print(W)
-			print(np.sort(tf.math.exp(sig_sq_g)/scaling_factor))
+			#print(np.sort(tf.math.exp(sig_sq_g)/scaling_factor))
+			print(sig_sq_g/scaling_factor)
+			print(non_med_h2/scaling_factor)
 		#print(np.sort(sig_sq_g/scaling_factor))
 
 	# Print files to output
 	gene_score_output_file = output_stem + '_gene_scores_' + str(epoch_iter) + '.txt'
-	write_gene_scores_to_output(gene_score_output_file, tf.math.exp(sig_sq_g).numpy()/scaling_factor, ordered_genes)
+	write_gene_scores_to_output(gene_score_output_file, (gene_boolean*sig_sq_g.numpy())/scaling_factor, ordered_genes)
+	#write_gene_scores_to_output(gene_score_output_file, tf.math.exp(sig_sq_g).numpy()/scaling_factor, ordered_genes)
 
 	# Print files to output
 	snp_gene_weight_parameters_output_file = output_stem + '_snp_gene_weight_parameters_' + str(epoch_iter) + '.txt'
@@ -322,10 +371,3 @@ for epoch_iter in range(max_epochs):
 	average_gene_rank_probabilities_output_file = output_stem + '_average_gene_rank_probabilities_' + str(epoch_iter) + '.txt'
 	write_average_gene_rank_probabilities(average_gene_rank_probabilities_output_file, gene_rank_probs)
 	print(average_gene_rank_probabilities_output_file)
-
-
-
-# logits = tf.squeeze(tf.matmul(np.float32(window_snp_gene_anno), W) +bb,axis=-1)
-# new_column = tf.fill([n_samp, 1], cc)
-# logits2 = tf.concat([new_column, logits], axis=1)
-# probs = tf.nn.softmax(logits2,axis=1)

@@ -174,4 +174,3 @@ t.close()
 
 print(len(valid_genes))
 print(len(gene_ensamble_ids))
-
