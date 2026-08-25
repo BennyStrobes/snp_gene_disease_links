@@ -46,6 +46,8 @@ ldl_silver_standard_gene_set_file="/n/groups/price/ben/causal_eqtl_gwas/input_da
 # Names of GWAS traits
 gwas_traits_file="/n/groups/price/ben/snp_gene_disease_links/input_data/new_gwas_trait_names.txt"
 
+variant_fine_mapping_dir="/n/groups/price/gaspard/KUSHAL_FINEMAP_SCRIPT/RESULTS/"
+
 
 ###########################
 # Output data
@@ -71,6 +73,9 @@ learned_snp_gene_links_dir=${tmp_output_root}"learned_snp_gene_links/"
 
 # Directory containing gene-set enrichment results
 gene_set_enrichment_results_dir=${perm_output_root}"gene_set_enrichment_analyses/"
+
+# Directorying containing additive snp-gene links
+additive_snp_gene_links_dir=${tmp_output_root}"additive_snp_gene_links/"
 
 visualize_results_dir=${tmp_output_root}"visualize_results_dir/"
 
@@ -99,7 +104,6 @@ method_version="snp_gene_component"
 prior_choice_arr=( "inverse_gamma_1e-16" "inverse_gamma_1e-8" "inverse_gamma_1e-3" "inverse_gamma_cross_gene_prior_1e-2" "inverse_gamma_cross_gene_prior_1e-1" "inverse_gamma_cross_gene_prior_1e-0" "inverse_gamma_cross_gene_prior_1e1" )
 
 
-
 method_version="snp_gene_component_fixed_to_smart_init"
 prior_choice_arr=( "inverse_gamma_1e-16"  )
 if false; then
@@ -118,20 +122,27 @@ done
 done
 fi
 
+if false; then
+sed 1d $gwas_traits_file | while read trait_name; do
+	echo $trait_name
+	additive_sgl_output_file=${additive_snp_gene_links_dir}${trait_name}"addative_snp_gene_links_gene_summary.txt"
+	sh run_additive_snp_gene_linking.sh $trait_name ${gene_annotation_file} $variant_fine_mapping_dir $additive_sgl_output_file
+done
+fi
+
 
 prior_choice="inverse_gamma_1e-16"
 #output_stem=${gene_set_enrichment_results_dir}${trait_name}"_"$prior_choice"_"${method_version}
 #sgdlinks_gene_summary_file=${learned_snp_gene_links_dir}"snp_gene_links_"${trait_name}"_lmm_snp_gene_link_"${prior_choice}"_"${method_version}"_gene_score_averaged.txt"
 method_identifier=$prior_choice"_"${method_version}
-sh gene_set_enrichment_analyses.sh $gwas_traits_file $learned_snp_gene_links_dir $pops_results_summary_file $magma_z_score_file $ldl_silver_standard_gene_set_file $gene_set_enrichment_results_dir $method_identifier
-
+if false; then
+sh gene_set_enrichment_analyses.sh $gwas_traits_file $learned_snp_gene_links_dir $pops_results_summary_file $magma_z_score_file $ldl_silver_standard_gene_set_file $gene_set_enrichment_results_dir $method_identifier $additive_snp_gene_links_dir
+fi
 
 
 
 if false; then
 module load R/3.5.1
-fi
-if false; then
 Rscript visualize_snp_gene_disease_linking.R ${learned_snp_gene_links_dir} ${gene_set_enrichment_results_dir} ${visualize_results_dir}
 fi
 

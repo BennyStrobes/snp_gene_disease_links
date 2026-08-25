@@ -13,10 +13,10 @@ magma_z_score_file="${4}"
 ldl_silver_standard_gene_set_file="${5}"
 gene_set_enrichment_results_dir="${6}"
 method_identifier="${7}"
+additive_snp_gene_links_dir="${8}"
 
 
 
 
 
-
-python3 run_gene_set_enrichment_analysis.py $gwas_traits_file $learned_snp_gene_links_dir $pops_results_summary_file $magma_z_score_file $ldl_silver_standard_gene_set_file $gene_set_enrichment_results_dir $method_identifier
+python3 run_gene_set_enrichment_analysis.py $gwas_traits_file $learned_snp_gene_links_dir $pops_results_summary_file $magma_z_score_file $ldl_silver_standard_gene_set_file $gene_set_enrichment_results_dir $method_identifier $additive_snp_gene_links_dir

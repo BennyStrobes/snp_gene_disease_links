@@ -169,6 +169,101 @@ def extract_sgd_links_data(sgdlinks_gene_summary_file, filter_means_thresh=None)
 	return np.asarray(genes), np.asarray(zs), np.asarray(means)
 
 
+
+def run_pops_enrichment_meta_analysis_v2(gene_set_enrichment_results_dir, method_identifier, gwas_trait_names, meta_analysis_output_stem, data_type):
+
+	n_genes_arr = [5,10,20,50,100,200,500]
+
+	sgds_dicti = {}
+	magmas_dicti = {}
+	linears_dicti = {}
+
+	for n_genes in n_genes_arr:
+		sgds_dicti[n_genes] = []
+		magmas_dicti[n_genes] = []
+		linears_dicti[n_genes] = []
+
+	for trait_name in gwas_trait_names:
+		genes = []
+		sgds = []
+		magmas = []
+		linears = []
+		pops = []
+
+		enrichment_summary_file = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier + '_' + data_type + '_pops_enrichments_summary_v2.txt'
+		f = open(enrichment_summary_file)
+		head_count = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			if head_count == 0:
+				head_count = head_count + 1
+				continue
+			genes.append(data[0])
+			sgds.append(float(data[1]))
+			magmas.append(float(data[2]))
+			linears.append(float(data[3]))
+			pops.append(float(data[4]))
+		f.close()
+
+		# Organize data
+		genes = np.asarray(genes)
+		sgds = np.asarray(sgds)
+		magmas = np.asarray(magmas)
+		pops = np.asarray(pops)
+		linears = np.asarray(linears)
+
+		for n_genes in n_genes_arr:
+
+			pops_sgds_arr = pops[np.argsort(-sgds)][:n_genes]
+			sgds_dicti[n_genes].append(pops_sgds_arr)
+			pops_magmas_arr = pops[np.argsort(-magmas)][:n_genes]
+			magmas_dicti[n_genes].append(pops_magmas_arr)
+
+			pops_linears_arr = pops[np.argsort(-linears)][:n_genes]
+			linears_dicti[n_genes].append(pops_linears_arr)
+
+
+
+	pops_mean_output_file = meta_analysis_output_stem + '_' + data_type + '_pops_enrichments_avg_pops_scores_per_threshold.txt'
+	t = open(pops_mean_output_file,'w')
+	t.write('method\tn_genes\tPOPS_mean\tSE\tPOPS_lb\tPOPS_ub\n')
+
+	for n_genes in n_genes_arr:
+
+		pops_arr = np.hstack(sgds_dicti[n_genes])
+		mean = np.mean(pops_arr)
+		se = np.std(pops_arr)/np.sqrt(len(pops_arr))
+		lb = mean - (1.96*se)
+		ub = mean + (1.96*se)
+
+		t.write('sgdLinks\t' + str(n_genes) + '\t' + str(mean) + '\t' + str(se) + '\t' + str(lb) + '\t' + str(ub) + '\n')
+
+		pops_arr = np.hstack(magmas_dicti[n_genes])
+		mean = np.mean(pops_arr)
+		se = np.std(pops_arr)/np.sqrt(len(pops_arr))
+		lb = mean - (1.96*se)
+		ub = mean + (1.96*se)
+
+		t.write('Magma\t' + str(n_genes) + '\t' + str(mean) + '\t' + str(se) + '\t' + str(lb) + '\t' + str(ub) + '\n')
+
+
+		pops_arr = np.hstack(linears_dicti[n_genes])
+		mean = np.mean(pops_arr)
+		se = np.std(pops_arr)/np.sqrt(len(pops_arr))
+		lb = mean - (1.96*se)
+		ub = mean + (1.96*se)
+
+		t.write('Linear\t' + str(n_genes) + '\t' + str(mean) + '\t' + str(se) + '\t' + str(lb) + '\t' + str(ub) + '\n')
+
+
+	t.close()
+
+	print(pops_mean_output_file)
+
+	return
+
+
 def run_pops_enrichment_meta_analysis(gene_set_enrichment_results_dir, method_identifier, gwas_trait_names, meta_analysis_output_stem, data_type):
 
 	n_genes_arr = [5,10,20,50,100,200,500]
@@ -492,6 +587,48 @@ def extract_gwas_trait_names(gwas_traits_file):
 	return np.asarray(arr)
 
 
+def hack_to_update_enrichment_summary_files(orig_output_file, new_output_file, additive_snp_gene_link_file):
+	gene_to_new_score = {}
+	f = open(additive_snp_gene_link_file)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		gene_name = data[0].split('.')[0]
+		score = data[1]
+		if gene_name in gene_to_new_score:
+			print('aslkdflkdfja')
+			pdb.set_trace()
+		gene_to_new_score[gene_name] = score
+	f.close()
+
+	f = open(orig_output_file)
+	t = open(new_output_file,'w')
+	head_count = 0
+
+
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2] + '\t' + 'linear' + '\t' + data[3] + '\n')
+			continue
+
+		gene_name = data[0]
+		t.write(data[0] + '\t' + data[1] + '\t' + data[2] + '\t' + gene_to_new_score[gene_name] + '\t' + data[3] + '\n')
+
+
+	f.close()
+	t.close()
+
+
+	return
+
+
 
 
 ######################
@@ -504,7 +641,7 @@ magma_z_score_file = sys.argv[4]
 ldl_silverstandard_gene_set = sys.argv[5]
 gene_set_enrichment_results_dir = sys.argv[6]
 method_identifier = sys.argv[7]
-
+additive_snp_gene_links_dir = sys.argv[8]
 
 
 
@@ -513,12 +650,10 @@ gwas_trait_names = extract_gwas_trait_names(gwas_traits_file)
 
 
 
-
-
-
 #########################
 # POPS gene set enrichment analysis
 #########################
+'''
 # Loop through gwas traits
 for trait_name in gwas_trait_names:
 
@@ -553,6 +688,26 @@ run_pops_enrichment_meta_analysis(gene_set_enrichment_results_dir, method_identi
 # Run POPS enrichment meta-analysis
 meta_analysis_output_stem = gene_set_enrichment_results_dir + 'meta_analysis_' + method_identifier
 run_pops_enrichment_meta_analysis_z_thresh(gene_set_enrichment_results_dir, method_identifier, gwas_trait_names, meta_analysis_output_stem, 'zscore')
+'''
+
+#########################
+# POPS gene set enrichment analysis with new method hack
+#########################
+# Loop through gwas traits
+'''
+for trait_name in gwas_trait_names:
+	orig_output_file = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier + '_zscore_pops_enrichments_summary.txt'
+	new_output_file = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier + '_zscore_pops_enrichments_summary_v2.txt'
+
+	additive_snp_gene_link_file = additive_snp_gene_links_dir + trait_name + 'addative_snp_gene_links_gene_summary.txt'
+	hack_to_update_enrichment_summary_files(orig_output_file, new_output_file, additive_snp_gene_link_file)
+'''
+
+
+# Run POPS enrichment meta-analysis
+meta_analysis_output_stem = gene_set_enrichment_results_dir + 'meta_analysis_v2_' + method_identifier
+run_pops_enrichment_meta_analysis_v2(gene_set_enrichment_results_dir, method_identifier, gwas_trait_names, meta_analysis_output_stem, 'zscore')
+
 
 
 
@@ -561,6 +716,7 @@ run_pops_enrichment_meta_analysis_z_thresh(gene_set_enrichment_results_dir, meth
 #########################
 # Silver-standard LDL cholesterol gene set enrichment analysis
 #########################
+'''
 trait_name = 'UKB_460K.biochemistry_LDLdirect'
 per_trait_output_stem = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier
 
@@ -586,4 +742,4 @@ ens_id_to_ldl_silverstandard = extract_ldl_silverstandard_genes(ldl_silverstanda
 # Run enrichment analysis with respect to sgdlinks zs
 output_stem = per_trait_output_stem + '_zscore_ldl_silver_standard_gs_enrichments'
 run_ldl_silver_standard_geneset_enrichment_analysis(sgdlinks_genes, sgdlinks_zs, ens_id_to_magma_z, ens_id_to_pops_score, ens_id_to_ldl_silverstandard, 'sgdLinks_z', output_stem)
-
+'''

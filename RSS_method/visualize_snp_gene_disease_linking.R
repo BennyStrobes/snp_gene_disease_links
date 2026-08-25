@@ -5,6 +5,12 @@ library(hash)
 library(RColorBrewer)
 options(warn=1)
 
+
+r35_figure_theme <- function() {
+	return(theme(plot.title = element_text(face="plain",size=11), text = element_text(size=9),axis.text=element_text(size=9), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=9), legend.title = element_text(size=9)))
+}
+
+
 figure_theme <- function() {
 	return(theme(plot.title = element_text(face="plain",size=11), text = element_text(size=11),axis.text=element_text(size=11), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=11), legend.title = element_text(size=11)))
 }
@@ -39,14 +45,63 @@ make_pops_se_barplot <- function(pops_enrichment_summary_file, informal_trait_na
   }
 
 
+make_pops_se_barplot_r35 <- function(pops_enrichment_summary_file, informal_trait_name) {
+	df <- read.table(pops_enrichment_summary_file, header=TRUE, sep="\t")
+	df = df[df$n_genes != 500,]
+	df = df[df$n_genes != 200,]
+	df$n_genes = factor(df$n_genes, levels=c(5,10,20,50,100))
+
+	print(df)
+
+
+	df$method[df$method == "sgdLinks"] <- "SGDL"
+	df$method[df$method == "Linear"] <- "Sum-PIPs"
+	df$method = factor(df$method, levels=c("Magma", "Sum-PIPs", "SGDL"))
+	pp<-ggplot(data=df, aes(x=n_genes, y=POPS_mean, fill=method)) +
+  		geom_bar(stat="identity", position=position_dodge(), colour="black") +
+  		geom_errorbar(aes(ymin=POPS_lb, ymax=POPS_ub), width=.4, position=position_dodge(.9))  +
+  		#scale_fill_manual(values=c("grey70", "seagreen4", "skyblue"))+
+  		scale_fill_manual(values=c("grey80", "grey30", "skyblue3")) +
+  		r35_figure_theme() +
+  theme(
+    legend.position = "top",
+    legend.key.size = unit(0.4, "cm"),
+    legend.margin = margin(0, 0, 0, 0),           # no extra padding inside
+    legend.box.spacing = unit(0, "pt")            # no space between plot and legend
+  ) +
+    		labs(x="Top N genes", y="Mean\nPoPS score", fill="") 
+
+  }
+
+
+
 
 learned_snp_gene_links_dir <- args[1]
 gene_set_enrichment_results_dir <- args[2]
 vis_dir <- args[3]
 
 
+
+
+
 method_version="inverse_gamma_1e-16_snp_gene_component_fixed_to_smart_init"
 
+
+
+# Meta-analysis
+trait_name="meta_analysis_v2"
+informal_trait_name=""
+pops_enrichment_summary_file <- paste0(gene_set_enrichment_results_dir, trait_name, "_", method_version, "_zscore_pops_enrichments_avg_pops_scores_per_threshold.txt")
+pops_se_barplot_meta <- make_pops_se_barplot_r35(pops_enrichment_summary_file, informal_trait_name)
+output_file <- paste0(vis_dir, "meta_anlysis_POPS_enrichment_barplot_", method_version, ".pdf")
+ggsave(pops_se_barplot_meta, file=output_file, width=3.0, height=1.4, units="in")
+print(output_file)
+
+
+
+
+
+if (FALSE) {
 trait_name="UKB_460K.body_HEIGHTz"
 informal_trait_name="Height"
 pops_enrichment_summary_file <- paste0(gene_set_enrichment_results_dir, trait_name, "_", method_version, "_zscore_pops_enrichments_avg_pops_scores_per_threshold.txt")
@@ -81,7 +136,7 @@ joint_pops <- plot_grid(pops_se_barplot1 + theme(legend.position="none"), pops_s
 
 output_file <- paste0(vis_dir, "POPS_enrichment_barplot_", method_version, ".pdf")
 ggsave(joint_pops, file=output_file, width=7.2, height=6.5, units="in")
-
+}
 
 
 

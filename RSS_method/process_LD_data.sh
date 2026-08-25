@@ -14,6 +14,9 @@ quasi_independent_ld_blocks_file="${4}"
 processed_ld_data_dir="${5}"
 
 
+
+source ~/.bash_profile
+
 genome_wide_ld_windows_file=${processed_ld_data_dir}"genome_wide_ld_windows.txt"
 python3 generate_genome_wide_ld_windows_file.py $baselineLD_anno_dir $quasi_independent_ld_blocks_file $genome_wide_ld_windows_file
 
@@ -21,11 +24,9 @@ python3 generate_genome_wide_ld_windows_file.py $baselineLD_anno_dir $quasi_inde
 
 
 snp_set="hampmap3_snps"
-module load python/3.7.4
 for chrom_num in $(seq 1 22); do 
 	python3 generate_ld_matrices_for_ld_windows_on_single_chromosome.py $chrom_num $genome_wide_ld_windows_file $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $snp_set $processed_ld_data_dir
 done
-
 
 
 
