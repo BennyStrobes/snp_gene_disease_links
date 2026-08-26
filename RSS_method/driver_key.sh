@@ -5,87 +5,86 @@
 ###########################
 
 # List of non-redundent summary statistics
-non_redundent_summary_statistics_file="/n/groups/price/ldsc/sumstats_formatted_2024/non_redundent_traits_EUR_2024.txt"
+non_redundent_summary_statistics_file="/lab-share/CHIP-Strober-e2/Public/ldsc/sumstats/sumstats_formatted_2024/non_redundent_traits_EUR_2024.txt"
 
 # Directory containing summary statistics
-sumstat_dir="/n/groups/price/ldsc/sumstats_formatted_2024/sumstats/"
+sumstat_dir="/lab-share/CHIP-Strober-e2/Public/ldsc/sumstats/sumstats_formatted_2024/sumstats/"
 
 # Directory of quasi-independent LD blocks (from cTWAS package)
 # Found here: https://github.com/xinhe-lab/ctwas/tree/main/inst/extdata/ldetect on April 3 2025
-quasi_independent_ld_blocks_file="/n/groups/price/ben/quasi_independent_ld_blocks/ld_detect/EUR.b38.bed"
+quasi_independent_ld_blocks_file="/lab-share/CHIP-Strober-e2/Public/LD_blocks/ldetect/EUR.b38.bed"
 
 # Directory containing plink files for 100G
-kg_plink_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/plink_files/"
+kg_plink_dir="/lab-share/CHIP-Strober-e2/Public/1000G_Phase3/hg38/"
 
 # Directory containing baselineLD annotation
-baselineLD_anno_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/baselineLD_v2.2/"
+baselineLD_anno_dir="/lab-share/CHIP-Strober-e2/Public/ldsc/reference_files/1000G_EUR_Phase3_hg38/baselineLD_v2.2/"
 
 # Directory containing ldsc weights
-ldsc_weights_dir="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/weights/"
+ldsc_weights_dir="/lab-share/CHIP-Strober-e2/Public/ldsc/reference_files/1000G_EUR_Phase3_hg38/weights/"
 
 # File containing hapmap3 rsid
-hapmap3_rsid_file="/n/groups/price/ldsc/reference_files/1000G_EUR_Phase3_hg38/w_hm3.noMHC.snplist"
+hapmap3_rsid_file="/lab-share/CHIP-Strober-e2/Public/ldsc/reference_files/1000G_EUR_Phase3_hg38/w_hm3.noMHC.snplist"
 
 # GTEx gencode gene annotation file
-# Downloaded from https://storage.googleapis.com/gtex_analysis_v8/reference/gencode.v26.GRCh38.genes.gtf on Jan 19 2022
-gene_annotation_file="/n/groups/price/ben/eqtl_informed_prs/gtex_v8_meta_analysis_eqtl_calling/input_data/gencode.v26.GRCh38.genes.gtf"
+# wget https://storage.googleapis.com/adult-gtex/references/v8/reference-tables/gencode.v26.GRCh38.genes.gtf on 8/25/26
+gene_annotation_file="/lab-share/CHIP-Strober-e2/Public/gene_annotation_files/gencode.v26.GRCh38.genes.gtf"
 
 # List of constrained genes
-constrained_genes_geneset_file="/n/groups/price/ben/snp_gene_disease_links/input_data/AMM_gs_constrained.txt"
+constrained_genes_geneset_file="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/input_data/AMM_gs_constrained.txt"
 
 # Directory containing pops results
 # Downloaded from https://www.finucanelab.org/data on 6/20/23
-pops_results_summary_file="/n/groups/price/ben/pops_data/PoPS_FULLRESULTS.txt.gz"
+pops_results_summary_file="/lab-share/CHIP-Strober-e2/Public/POPs/PoPS_FULLRESULTS.txt.gz"
 
 # File containing MAGMA z-scores across traits
-magma_z_score_file="/n/groups/price/ben/snp_gene_disease_links/input_data/MAGMA_v108_GENE_10_ZSTAT_for_scDRS.txt"
+magma_z_score_file="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/input_data/MAGMA_v108_GENE_10_ZSTAT_for_scDRS.txt"
 
 # LDL silver standard gene sets
-ldl_silver_standard_gene_set_file="/n/groups/price/ben/causal_eqtl_gwas/input_data/silver_standard_ldl_cholesterol_genes.csv"
+ldl_silver_standard_gene_set_file="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/input_data/silver_standard_ldl_cholesterol_genes.csv"
 
 # Names of GWAS traits
-gwas_traits_file="/n/groups/price/ben/snp_gene_disease_links/input_data/new_gwas_trait_names.txt"
+gwas_traits_file="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/input_data/new_gwas_trait_names.txt"
 
-variant_fine_mapping_dir="/n/groups/price/gaspard/KUSHAL_FINEMAP_SCRIPT/RESULTS/"
+# GWAS fine-mapping results
+variant_fine_mapping_dir="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/input_data/KUSHAL_FINEMAP_SCRIPT/RESULTS/"
 
 
 ###########################
 # Output data
 ###########################
 # Output root
-tmp_output_root="/n/scratch/users/b/bes710/snp_gene_disease_links/"
-perm_output_root="/n/groups/price/ben/snp_gene_disease_links/"
+output_root="/lab-share/CHIP-Strober-e2/Public/ben/snp_gene_disease_links/"
 
 # Directory containing processed LD data
-processed_ld_data_dir=${tmp_output_root}"processed_LD/"
+processed_ld_data_dir=${output_root}"processed_LD/"
 
 # Directory containing snp-gene annotations
-snp_gene_annotation_dir=${tmp_output_root}"snp_gene_annotations/"
+snp_gene_annotation_dir=${output_root}"snp_gene_annotations/"
 
 # Pre-organized snp-gene annotations
-preorganized_snp_gene_annotation_dir=${tmp_output_root}"preorganized_snp_gene_annotations/"
+preorganized_snp_gene_annotation_dir=${output_root}"preorganized_snp_gene_annotations/"
 
 # Disease-specific tmp data dir
-disease_specific_tmp_data_dir=${tmp_output_root}"disease_specific_tmp_data/"
+disease_specific_tmp_data_dir=${output_root}"disease_specific_tmp_data/"
 
 # Learned snp-gene-disease links
-learned_snp_gene_links_dir=${tmp_output_root}"learned_snp_gene_links/"
+learned_snp_gene_links_dir=${output_root}"learned_snp_gene_links/"
 
 # Directory containing gene-set enrichment results
-gene_set_enrichment_results_dir=${perm_output_root}"gene_set_enrichment_analyses/"
+gene_set_enrichment_results_dir=${output_root}"gene_set_enrichment_analyses/"
 
 # Directorying containing additive snp-gene links
-additive_snp_gene_links_dir=${tmp_output_root}"additive_snp_gene_links/"
+additive_snp_gene_links_dir=${output_root}"additive_snp_gene_links/"
 
-visualize_results_dir=${tmp_output_root}"visualize_results_dir/"
+visualize_results_dir=${output_root}"visualize_results_dir/"
 
 
 ##############################
 # Code
 ##############################
-if false; then
-sbatch process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $quasi_independent_ld_blocks_file $processed_ld_data_dir
-fi
+sh process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $quasi_independent_ld_blocks_file $processed_ld_data_dir $gwas_traits_file $sumstat_dir
+
 
 
 K_closest_genes="10"
