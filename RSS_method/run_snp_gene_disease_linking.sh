@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -c 1                               # Request one core
-#SBATCH -t 0-100:00                         # Runtime in D-HH:MM format
+#SBATCH -t 0-150:00                         # Runtime in D-HH:MM format
 #SBATCH -p bch-compute                           # Partition to run in
-#SBATCH --mem=12G                         # Memory total in MiB (for all cores)
+#SBATCH --mem=18G                         # Memory total in MiB (for all cores)
 
 
 

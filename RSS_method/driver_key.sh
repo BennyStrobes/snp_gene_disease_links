@@ -99,10 +99,9 @@ fi
 
 
 ## Run inference
-
+if false; then
 prior_choice="inverse_gamma_1e-16"
 method_version="snp_gene_component_fixed_to_smart_init"
-if false; then
 sed 1d $gwas_traits_file | while read trait_name; do
 
 

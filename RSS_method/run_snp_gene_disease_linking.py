@@ -212,7 +212,7 @@ else:
 
 
 mod = bayesian_lmm_snp_gene_link_prior_rss_h2.Bayesian_LMM_RSS_h2_inference(window_names, window_info, gwas_sample_size, ordered_genes, output_stem + '_lmm_snp_gene_link_' + prior_choice + '_' + method_version + '_', inv_gamma_alpha=inv_gamma_alpha_prior, inv_gamma_beta=inv_gamma_beta_prior, method_version=method_version, cross_gene_hyperparm=cross_gene_hyperparm)
-mod.fit()
+mod.fit(total_iterations=7000, burn_in_iterations=5000, update_resid_var_bool=True, thin_iterations=2)
 
 
 

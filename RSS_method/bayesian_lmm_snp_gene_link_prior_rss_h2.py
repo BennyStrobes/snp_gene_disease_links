@@ -203,7 +203,7 @@ class Bayesian_LMM_RSS_h2_inference(object):
 
 
 
-	def fit(self, total_iterations=12000, burn_in_iterations=7000, update_resid_var_bool=True, thin_iterations=5):
+	def fit(self, total_iterations=10000, burn_in_iterations=5000, update_resid_var_bool=True, thin_iterations=5):
 		""" Fit the model.
 		"""
 		# Initialize model params
