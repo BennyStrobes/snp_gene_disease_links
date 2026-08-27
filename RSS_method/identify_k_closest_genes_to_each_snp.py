@@ -7,8 +7,7 @@ import gzip
 
 
 
-
-def extract_snps_on_this_chromosome(baselineLD_anno_dir, chrom_num, hm3_rsids):
+def extract_snps_on_this_chromosome(baselineLD_anno_dir, chrom_num, hm3_rsids, snp_set):
 	snp_file = baselineLD_anno_dir + 'baselineLD.' + chrom_num + '.annot.gz'
 	head_count = 0
 	rsids = []
@@ -24,7 +23,7 @@ def extract_snps_on_this_chromosome(baselineLD_anno_dir, chrom_num, hm3_rsids):
 		line_chrom_num = data[0]
 		snp_pos = int(data[1])
 		rsid = data[2]
-		if rsid not in hm3_rsids:
+		if snp_set == 'hm3_snps' and rsid not in hm3_rsids:
 			continue
 		rsids.append(rsid)
 		pos.append(snp_pos)
@@ -143,6 +142,7 @@ chrom_num = sys.argv[4]
 hapmap3_rsid_file = sys.argv[5]
 snp_gene_annotation_dir = sys.argv[6]
 
+snp_set='assymetric_snps' # alt: hm3_snps
 
 
 #############
@@ -151,7 +151,7 @@ hm3_rsids = extract_hm3_rsids(hapmap3_rsid_file, chrom_num)
 
 #############
 # extract snps on this chromosome
-snp_rsids, snp_positions = extract_snps_on_this_chromosome(baselineLD_anno_dir, chrom_num, hm3_rsids)
+snp_rsids, snp_positions = extract_snps_on_this_chromosome(baselineLD_anno_dir, chrom_num, hm3_rsids, snp_set)
 
 
 #############

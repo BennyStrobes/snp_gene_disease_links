@@ -83,20 +83,45 @@ visualize_results_dir=${output_root}"visualize_results_dir/"
 ##############################
 # Code
 ##############################
-sh process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $quasi_independent_ld_blocks_file $processed_ld_data_dir $gwas_traits_file $sumstat_dir
-
-
-
-K_closest_genes="10"
 if false; then
-sh generate_snp_gene_annotations.sh $baselineLD_anno_dir $gene_annotation_file $K_closest_genes $snp_gene_annotation_dir $processed_ld_data_dir $hapmap3_rsid_file $preorganized_snp_gene_annotation_dir
+sh process_LD_data.sh $hapmap3_rsid_file $baselineLD_anno_dir $kg_plink_dir $quasi_independent_ld_blocks_file $processed_ld_data_dir $gwas_traits_file $sumstat_dir
 fi
 
 
 
 
+K_closest_genes="10"
+if false; then
+sbatch generate_snp_gene_annotations.sh $baselineLD_anno_dir $gene_annotation_file $K_closest_genes $snp_gene_annotation_dir $processed_ld_data_dir $hapmap3_rsid_file $preorganized_snp_gene_annotation_dir
+fi
 
 
+
+
+## Run inference
+
+prior_choice="inverse_gamma_1e-16"
+method_version="snp_gene_component_fixed_to_smart_init"
+if false; then
+sed 1d $gwas_traits_file | while read trait_name; do
+
+
+
+	trait_file=${sumstat_dir}${trait_name}".sumstats"
+	input_window_summary_file=${preorganized_snp_gene_annotation_dir}"window_LD_summary_with_snp_gene_anno_v2.txt"
+	gene_summary_file=${preorganized_snp_gene_annotation_dir}"gene_name_to_integer_mapping.txt"
+	output_stem=${learned_snp_gene_links_dir}"snp_gene_links_"${trait_name}
+	sbatch run_snp_gene_disease_linking.sh $trait_name $trait_file $input_window_summary_file ${gene_summary_file} ${disease_specific_tmp_data_dir}${trait_name} ${output_stem} $prior_choice $method_version
+
+done
+fi
+
+
+
+
+################
+# OLD
+#################
 
 prior_choice="inverse_gamma_cross_gene_prior_1e-1"
 method_version="snp_gene_component"

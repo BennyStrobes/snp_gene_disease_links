@@ -53,6 +53,11 @@ f = open(input_file)
 for line in f:
 	line = line.rstrip()
 	data = line.split('\t')
+	# 8 LD-summary columns (window_id, chrom, start, end, snp_file, regression_snp_file,
+	# Q_mat, W_mat) plus the two appended by preorganize_snp_gene_annotations.py
+	if len(data) != 10:
+		print('assumption eroror: expected 10 columns in ' + input_file + ', got ' + str(len(data)))
+		pdb.set_trace()
 	if head_count == 0:
 		head_count = head_count + 1
 		continue
@@ -96,15 +101,18 @@ head_count = 0
 f = open(input_file)
 t = open(output_file,'w')
 
-
-head_count = 0
-f = open(input_file)
 for line in f:
 	line = line.rstrip()
 	data = line.split('\t')
+	# 8 LD-summary columns (window_id, chrom, start, end, snp_file, regression_snp_file,
+	# Q_mat, W_mat) plus the two appended by preorganize_snp_gene_annotations.py
+	if len(data) != 10:
+		print('assumption eroror: expected 10 columns in ' + input_file + ', got ' + str(len(data)))
+		pdb.set_trace()
 	if head_count == 0:
 		head_count = head_count + 1
-		t.write(line + '\n')
+		# Column 8 now holds integer-encoded gene files rather than gene-name files
+		t.write('\t'.join(data[:8]) + '\t' + 'linked_integer_genes_file' + '\t' + data[9] + '\n')
 		continue
 	print(data[0])
 	gene_names_file = data[8]

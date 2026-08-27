@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -c 1                               # Request one core
 #SBATCH -t 0-5:00                         # Runtime in D-HH:MM format
-#SBATCH -p short                           # Partition to run in
-#SBATCH --mem=10G                         # Memory total in MiB (for all cores)
+#SBATCH -p bch-compute                           # Partition to run in
+#SBATCH --mem=40G                         # Memory total in MiB (for all cores)
 
 
 
@@ -14,6 +14,10 @@ snp_gene_annotation_dir="${4}"
 processed_ld_data_dir="${5}"
 hapmap3_rsid_file="${6}"
 preorganized_snp_gene_annotation_dir="${7}"
+
+source ~/.bashrc
+conda activate plink_env
+
 
 
 for chrom_num in $(seq 1 22); do 

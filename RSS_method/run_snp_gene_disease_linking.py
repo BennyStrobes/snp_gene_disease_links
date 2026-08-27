@@ -2,33 +2,37 @@ import sys
 import numpy as np 
 import os
 import pdb
-import bayesian_lmm_rss_h2
-import bayesian_lmm_mog_prior_rss_h2
 import bayesian_lmm_snp_gene_link_prior_rss_h2
-import bayesian_lmm_snp_gene_link_prior_gene_partition_rss_h2
 
-def get_rsids_in_window(rsid_file):
-	rsids = []
+def count_rsids_in_window(rsid_file):
+	"""Number of snps in a window's rsid file.
+
+	Only the COUNT is needed while the chain runs (it sizes gamma). The rsid strings
+	themselves are re-read once at output time -- holding all ~9.9M of them for the whole
+	run costs ~435 MB for something used only when writing the final links file.
+	"""
+	n_snps = 0
 	f = open(rsid_file)
 	head_count = 0
 	for line in f:
-		line = line.rstrip()
-		data = line.split('\t')
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		rsids.append(data[0])
+		n_snps = n_snps + 1
 	f.close()
 
-	return np.asarray(rsids)
+	return n_snps
 
 def load_in_data(input_window_summary_file):
 	window_names = []
 	window_Q_files = []
-	window_rsids = []
+	window_rsid_files = []
+	window_n_snps = []
 	window_zs = []
 	window_snp_gene_names = []
 	window_snp_gene_annotations = []
+
+	gwas_sample_size = None
 
 	head_count = 0
 	f = open(input_window_summary_file)
@@ -40,7 +44,6 @@ def load_in_data(input_window_summary_file):
 			continue
 
 		# Extract relevent fields
-		gwas_sample_size = float(data[4])
 		window_name = data[0]
 		rsid_file = data[5]
 		zscore_file = data[6]
@@ -48,12 +51,41 @@ def load_in_data(input_window_summary_file):
 		linked_genes_file = data[8]
 		snp_gene_anno_file = data[9]
 
-		rsids = get_rsids_in_window(rsid_file)
+		# The gwas sample size is a property of the trait, not of the window
+		line_gwas_sample_size = float(data[4])
+		if gwas_sample_size is None:
+			gwas_sample_size = line_gwas_sample_size
+		elif line_gwas_sample_size != gwas_sample_size:
+			print('assumption eroror: gwas sample size varies across windows (' + str(gwas_sample_size) + ' vs ' + str(line_gwas_sample_size) + ')')
+			pdb.set_trace()
+
+		n_snps = count_rsids_in_window(rsid_file)
 		zs = np.load(zscore_file)
+
+		# Under asymmetric LD Q_mat is (n_whitened_components X n_reference_snps) and is NOT
+		# square. Its COLUMNS are the reference snps -- they carry gamma and the gene links.
+		# Its ROWS are the whitened regression-snp space -- they carry the gwas z-scores.
+		# Both axes are checked here because a half-migrated pipeline otherwise fails deep
+		# inside the gibbs sampler with an opaque index error.
+		# mmap_mode reads only the .npy header, so this costs no memory.
+		Q_shape = np.load(Q_mat_file, mmap_mode='r').shape
+		linked_genes_shape = np.load(linked_genes_file, mmap_mode='r').shape
+
+		if Q_shape[1] != n_snps:
+			print('assumption eroror: window ' + window_name + ' Q_mat has ' + str(Q_shape[1]) + ' columns but ' + str(n_snps) + ' snps in ' + rsid_file)
+			print('Column 5 of the window summary must be the REFERENCE snp file, not the regression snp file.')
+			pdb.set_trace()
+		if linked_genes_shape[0] != n_snps:
+			print('assumption eroror: window ' + window_name + ' linked genes has ' + str(linked_genes_shape[0]) + ' rows but ' + str(n_snps) + ' reference snps')
+			pdb.set_trace()
+		if Q_shape[0] != len(zs):
+			print('assumption eroror: window ' + window_name + ' Q_mat has ' + str(Q_shape[0]) + ' rows but ' + str(len(zs)) + ' whitened z-scores')
+			pdb.set_trace()
 
 		# Add to global arrays
 		window_names.append(window_name)
-		window_rsids.append(rsids)
+		window_rsid_files.append(rsid_file)
+		window_n_snps.append(n_snps)
 		window_Q_files.append(Q_mat_file)
 		window_zs.append(zs)
 		window_snp_gene_names.append(linked_genes_file)
@@ -61,9 +93,14 @@ def load_in_data(input_window_summary_file):
 
 	f.close()
 
+	if gwas_sample_size is None:
+		print('assumption eroror: no windows found in ' + input_window_summary_file)
+		pdb.set_trace()
 
+	print('windows: ' + str(len(window_names)) + ' | gwas sample size: ' + str(gwas_sample_size))
+	print('reference snps (gamma): ' + str(np.sum(window_n_snps)) + ' | whitened components (z): ' + str(np.sum([len(x) for x in window_zs])))
 
-	return np.asarray(window_names), window_rsids, window_zs, np.asarray(window_Q_files), np.asarray(window_snp_gene_names), np.asarray(window_snp_gene_annotations), gwas_sample_size
+	return np.asarray(window_names), window_rsid_files, window_n_snps, window_zs, np.asarray(window_Q_files), np.asarray(window_snp_gene_names), np.asarray(window_snp_gene_annotations), gwas_sample_size
 
 def load_in_genes(gene_summary_file):
 	gene_arr = []
@@ -107,24 +144,6 @@ def write_average_gene_rank_probabilities(average_gene_rank_probabilities_output
 	t.close()
 	return
 
-def load_in_geneset_categories(ordered_genes,geneset_file):
-	constrained_genes = {}
-	f = open(geneset_file)
-	for line in f:
-		line = line.rstrip()
-		data = line.split('\t')
-		constrained_genes[line] = 1
-	f.close()
-	gene_categories = []
-	for ordered_gene in ordered_genes:
-		if ordered_gene.split('.')[0] in constrained_genes:
-			gene_categories.append(1)
-		else:
-			gene_categories.append(0)
-
-	return np.asarray(gene_categories)
-
-
 #######################
 # Command line args
 #######################
@@ -134,17 +153,18 @@ gene_summary_file = sys.argv[3]
 output_stem = sys.argv[4]
 prior_choice = sys.argv[5]
 method_version = sys.argv[6]
-geneset_file = sys.argv[7]
 
 ################
 # Learning parameters
-geneset_partitioning=False
+# Only one method version is supported; everything else has been removed
+if method_version != 'snp_gene_component_fixed_to_smart_init':
+	print('assumption eroror: only snp_gene_component_fixed_to_smart_init is supported, got ' + str(method_version))
+	pdb.set_trace()
 
 ######
 # Load in genes
 ordered_genes = load_in_genes(gene_summary_file)
 
-gene_set_categories = load_in_geneset_categories(ordered_genes, geneset_file)
 
 
 ######
@@ -156,7 +176,7 @@ gene_set_categories = load_in_geneset_categories(ordered_genes, geneset_file)
 # 5. Window snp gene names 
 # 6. Window snp gene annos 
 # 7. GWAS sample size
-window_names, window_rsids, window_zs, window_Q_files, window_snp_gene_name_files, window_snp_gene_annotation_files, gwas_sample_size = load_in_data(input_window_summary_file)
+window_names, window_rsid_files, window_n_snps, window_zs, window_Q_files, window_snp_gene_name_files, window_snp_gene_annotation_files, gwas_sample_size = load_in_data(input_window_summary_file)
 
 ##*#*#*#*#*#**#
 #window_names = window_names[:130]
@@ -170,8 +190,8 @@ window_names, window_rsids, window_zs, window_Q_files, window_snp_gene_name_file
 window_info = {}
 for ii, window_name in enumerate(window_names):
 	window_info[window_name] = {}
-	window_info[window_name]['n_snps'] = len(window_rsids[ii])
-	window_info[window_name]['snp_names'] = window_rsids[ii]
+	window_info[window_name]['n_snps'] = window_n_snps[ii]
+	window_info[window_name]['rsid_file'] = window_rsid_files[ii]
 	window_info[window_name]['Q_file'] = window_Q_files[ii]
 	window_info[window_name]['beta_pc'] = window_zs[ii]/np.sqrt(gwas_sample_size)
 	window_info[window_name]['snp_gene_names_file'] = window_snp_gene_name_files[ii]
@@ -190,12 +210,9 @@ if prior_choice.startswith('inverse_gamma_cross_gene_prior'):
 else:
 	cross_gene_hyperparm = False
 
-if geneset_partitioning:
-	mod = bayesian_lmm_snp_gene_link_prior_gene_partition_rss_h2.Bayesian_LMM_RSS_h2_inference(window_names, window_info, gwas_sample_size, ordered_genes, gene_set_categories, output_stem + '_lmm_snp_gene_link_' + prior_choice + '_' + method_version + '_constrained_gene_partioning_', inv_gamma_alpha=inv_gamma_alpha_prior, inv_gamma_beta=inv_gamma_beta_prior, method_version=method_version, cross_gene_hyperparm=cross_gene_hyperparm)
-	mod.fit()
-else:
-	mod = bayesian_lmm_snp_gene_link_prior_rss_h2.Bayesian_LMM_RSS_h2_inference(window_names, window_info, gwas_sample_size, ordered_genes, output_stem + '_lmm_snp_gene_link_' + prior_choice + '_' + method_version + '_', inv_gamma_alpha=inv_gamma_alpha_prior, inv_gamma_beta=inv_gamma_beta_prior, method_version=method_version, cross_gene_hyperparm=cross_gene_hyperparm)
-	mod.fit()
+
+mod = bayesian_lmm_snp_gene_link_prior_rss_h2.Bayesian_LMM_RSS_h2_inference(window_names, window_info, gwas_sample_size, ordered_genes, output_stem + '_lmm_snp_gene_link_' + prior_choice + '_' + method_version + '_', inv_gamma_alpha=inv_gamma_alpha_prior, inv_gamma_beta=inv_gamma_beta_prior, method_version=method_version, cross_gene_hyperparm=cross_gene_hyperparm)
+mod.fit()
 
 
 
