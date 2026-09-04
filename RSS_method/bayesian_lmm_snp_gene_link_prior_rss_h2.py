@@ -1,5 +1,6 @@
 import numpy as np 
 import pdb
+import gzip
 from scipy.stats import invgamma
 import time
 from numba import njit
@@ -96,22 +97,23 @@ def print_gene_total_h2_to_output_file(sampled_gene_total_h2, mean_gene_n_snps, 
 def print_snp_gene_link_output_file(window_names, snp_gene_class_counts, n_posterior_samples, window_info, ordered_genes, snp_gene_link_output_file):
 	"""Posterior snp-gene assignment, written ONCE at the end of the run.
 
-	This used to be dumped in full every 5 gibbs iterations and was never read by anything
-	downstream. Each snp's class assignment is instead tallied across the retained samples,
-	and the modal gene is reported together with its posterior probability.
+	Each snp's class assignment is tallied across the retained samples. Every candidate
+	gene (all C ranks, closest first) is reported with its posterior probability -- one
+	line per snp-gene pair, so the modal gene is the max-probability row per snp.
+	Gzipped because this is C lines per snp genome-wide.
 	"""
-	t = open(snp_gene_link_output_file,'w')
-	t.write('snp_id\tmodal_gene_rank\tmodal_gene_name\tmodal_gene_integer\tposterior_probability\n')
+	t = gzip.open(snp_gene_link_output_file, 'wt')
+	t.write('snp_id\tgene_rank\tgene_name\tgene_integer\tposterior_probability\n')
 	for window_name in window_names:
 		counts = snp_gene_class_counts[window_name]
+		probs = counts/n_posterior_samples
 		window_snp_gene_mat = np.load(window_info[window_name]['snp_gene_names_file'])
 		window_rsids = get_rsids_in_window(window_info[window_name]['rsid_file'])
-		modal_class = np.argmax(counts, axis=1)
-		modal_prob = counts[np.arange(counts.shape[0]), modal_class]/n_posterior_samples
+		CC = counts.shape[1]
 		for snp_index, snp_name in enumerate(window_rsids):
-			snp_class = modal_class[snp_index]
-			gene_index = window_snp_gene_mat[snp_index, snp_class]
-			t.write(snp_name + '\t' + str(snp_class) + '\t' + ordered_genes[gene_index] + '\t' + str(gene_index) + '\t' + str(modal_prob[snp_index]) + '\n')
+			for snp_class in range(CC):
+				gene_index = window_snp_gene_mat[snp_index, snp_class]
+				t.write(snp_name + '\t' + str(snp_class) + '\t' + ordered_genes[gene_index] + '\t' + str(gene_index) + '\t' + str(probs[snp_index, snp_class]) + '\n')
 	t.close()
 	return
 
@@ -298,7 +300,7 @@ class Bayesian_LMM_RSS_h2_inference(object):
 		print_gene_scores_to_output_file(self.sampled_gene_scores, self.ordered_genes, self.output_stem + 'gene_score_averaged.txt')
 		print_gene_total_h2_to_output_file(self.sampled_gene_total_h2, self.sum_gene_n_snps/self.n_posterior_samples, self.ordered_genes, self.output_stem + 'gene_total_h2_averaged.txt')
 		print_snp_gene_priors_output_file(self.pis, self.output_stem + 'snp_gene_priors_averaged.txt')
-		print_snp_gene_link_output_file(self.window_names, self.snp_gene_class_counts, self.n_posterior_samples, self.window_info, self.ordered_genes, self.output_stem + 'snp_gene_links.txt')
+		print_snp_gene_link_output_file(self.window_names, self.snp_gene_class_counts, self.n_posterior_samples, self.window_info, self.ordered_genes, self.output_stem + 'snp_gene_links.txt.gz')
 
 		return
 
