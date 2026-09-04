@@ -126,6 +126,15 @@ done
 fi
 
 
+if false; then
+prior_choice="inverse_gamma_1e-16"
+method_version="snp_gene_component_fixed_to_smart_init"
+#output_stem=${gene_set_enrichment_results_dir}${trait_name}"_"$prior_choice"_"${method_version}
+#sgdlinks_gene_summary_file=${learned_snp_gene_links_dir}"snp_gene_links_"${trait_name}"_lmm_snp_gene_link_"${prior_choice}"_"${method_version}"_gene_score_averaged.txt"
+method_identifier=$prior_choice"_"${method_version}
+sbatch gene_set_enrichment_analyses.sh $gwas_traits_file $learned_snp_gene_links_dir $pops_results_summary_file $magma_z_score_file $ldl_silver_standard_gene_set_file $gene_set_enrichment_results_dir $method_identifier $additive_snp_gene_links_dir
+fi
+
 
 
 

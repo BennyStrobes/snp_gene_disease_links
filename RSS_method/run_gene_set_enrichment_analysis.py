@@ -653,7 +653,6 @@ gwas_trait_names = extract_gwas_trait_names(gwas_traits_file)
 #########################
 # POPS gene set enrichment analysis
 #########################
-'''
 # Loop through gwas traits
 for trait_name in gwas_trait_names:
 
@@ -688,20 +687,19 @@ run_pops_enrichment_meta_analysis(gene_set_enrichment_results_dir, method_identi
 # Run POPS enrichment meta-analysis
 meta_analysis_output_stem = gene_set_enrichment_results_dir + 'meta_analysis_' + method_identifier
 run_pops_enrichment_meta_analysis_z_thresh(gene_set_enrichment_results_dir, method_identifier, gwas_trait_names, meta_analysis_output_stem, 'zscore')
-'''
+
 
 #########################
 # POPS gene set enrichment analysis with new method hack
 #########################
 # Loop through gwas traits
-'''
 for trait_name in gwas_trait_names:
 	orig_output_file = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier + '_zscore_pops_enrichments_summary.txt'
 	new_output_file = gene_set_enrichment_results_dir + trait_name + '_' + method_identifier + '_zscore_pops_enrichments_summary_v2.txt'
 
 	additive_snp_gene_link_file = additive_snp_gene_links_dir + trait_name + 'addative_snp_gene_links_gene_summary.txt'
 	hack_to_update_enrichment_summary_files(orig_output_file, new_output_file, additive_snp_gene_link_file)
-'''
+
 
 
 # Run POPS enrichment meta-analysis
