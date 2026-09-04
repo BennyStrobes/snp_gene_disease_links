@@ -156,9 +156,9 @@ method_version = sys.argv[6]
 
 ################
 # Learning parameters
-# Only one method version is supported; everything else has been removed
-if method_version != 'snp_gene_component_fixed_to_smart_init':
-	print('assumption eroror: only snp_gene_component_fixed_to_smart_init is supported, got ' + str(method_version))
+# Supported method versions
+if method_version not in ['snp_gene_component_fixed_to_smart_init', 'snp_gene_component_with_null']:
+	print('assumption eroror: unsupported method_version ' + str(method_version))
 	pdb.set_trace()
 
 ######

@@ -116,6 +116,20 @@ done
 fi
 
 
+## Run inference (sparse with-null variant: learned genome-wide null probability + background slab)
+if false; then
+prior_choice="inverse_gamma_cross_gene_prior_1e-0"
+method_version="snp_gene_component_with_null"
+sed 1d $gwas_traits_file | while read trait_name; do
+	trait_file=${sumstat_dir}${trait_name}".sumstats"
+	input_window_summary_file=${preorganized_snp_gene_annotation_dir}"window_LD_summary_with_snp_gene_anno_v2.txt"
+	gene_summary_file=${preorganized_snp_gene_annotation_dir}"gene_name_to_integer_mapping.txt"
+	output_stem=${learned_snp_gene_links_dir}"snp_gene_links_"${trait_name}
+	sbatch run_snp_gene_disease_linking.sh $trait_name $trait_file $input_window_summary_file ${gene_summary_file} ${disease_specific_tmp_data_dir}${trait_name} ${output_stem} $prior_choice $method_version
+done
+fi
+
+
 # Run fine-mapped additivie snp-gene linking
 if false; then
 sed 1d $gwas_traits_file | while read trait_name; do
