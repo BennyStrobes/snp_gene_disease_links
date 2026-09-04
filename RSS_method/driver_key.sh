@@ -116,6 +116,17 @@ done
 fi
 
 
+# Run fine-mapped additivie snp-gene linking
+if false; then
+sed 1d $gwas_traits_file | while read trait_name; do
+	echo $trait_name
+	additive_sgl_output_file=${additive_snp_gene_links_dir}${trait_name}"addative_snp_gene_links_gene_summary.txt"
+	sbatch run_additive_snp_gene_linking.sh $trait_name ${gene_annotation_file} $variant_fine_mapping_dir $additive_sgl_output_file $baselineLD_anno_dir
+done
+fi
+
+
+
 
 
 ################
@@ -145,13 +156,7 @@ done
 done
 fi
 
-if false; then
-sed 1d $gwas_traits_file | while read trait_name; do
-	echo $trait_name
-	additive_sgl_output_file=${additive_snp_gene_links_dir}${trait_name}"addative_snp_gene_links_gene_summary.txt"
-	sh run_additive_snp_gene_linking.sh $trait_name ${gene_annotation_file} $variant_fine_mapping_dir $additive_sgl_output_file
-done
-fi
+
 
 
 prior_choice="inverse_gamma_1e-16"
